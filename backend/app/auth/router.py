@@ -59,6 +59,7 @@ async def register(body: RegisterRequest, db: Annotated[AsyncSession, Depends(ge
     await db.flush()
 
     verification_status = "N/A"
+    donor_id = ngo_id = driver_id = None
 
     if body.role == "DONOR":
         if not body.organisation_name or not body.address:
@@ -67,8 +68,9 @@ async def register(body: RegisterRequest, db: Annotated[AsyncSession, Depends(ge
                 "organisation_name and address are required to register a donor.",
                 "organisation_name",
             )
+        donor_id = new_id("don_org")
         db.add(Donor(
-            id=new_id("don_org"),
+            id=donor_id,
             user_id=user_id,
             organisation_name=body.organisation_name,
             address=body.address,
@@ -103,8 +105,9 @@ async def register(body: RegisterRequest, db: Annotated[AsyncSession, Depends(ge
         verification_status = "PENDING"
 
     elif body.role == "DRIVER":
+        driver_id = new_id("veh")
         db.add(Vehicle(
-            id=new_id("veh"),
+            id=driver_id,
             driver_id=user_id,
             capacity_kg=body.vehicle_capacity_kg or 0.0,
             current_location="",
@@ -113,7 +116,14 @@ async def register(body: RegisterRequest, db: Annotated[AsyncSession, Depends(ge
 
     await db.commit()
 
-    return envelope({"user_id": user_id, "role": body.role, "verification_status": verification_status})
+    return envelope({
+        "user_id": user_id,
+        "role": body.role,
+        "verification_status": verification_status,
+        "donor_id": donor_id,
+        "ngo_id": ngo_id,
+        "driver_id": driver_id,
+    })
 
 
 @router.post("/login")
